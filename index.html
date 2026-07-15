@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DSMdle — 오늘의 사례를 진단해보세요</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EFF2ED;
+    --card:#FFFFFF;
+    --ink:#1E2A26;
+    --navy:#223843;
+    --muted:#5B6B63;
+    --line:#D8DDD3;
+    --rust:#A15C34;
+    --sage:#4C6B57;
+    --sage-dark:#3B5445;
+    --danger:#9C3B2E;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+  }
+  .wrap{max-width:640px;margin:0 auto;padding:48px 20px 80px;}
+
+  /* ---------- Lock screen ---------- */
+  #lock-screen{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+  }
+  .lock-card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:40px 36px;
+    max-width:360px;
+    width:100%;
+    text-align:center;
+    box-shadow:0 1px 3px rgba(30,42,38,0.08);
+  }
+  .lock-tab{
+    display:inline-block;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    letter-spacing:0.12em;
+    color:var(--rust);
+    border:1px solid var(--rust);
+    border-radius:2px;
+    padding:3px 10px;
+    margin-bottom:18px;
+  }
+  .lock-card h1{
+    font-family:'Lora',serif;
+    font-size:26px;
+    margin:0 0 6px;
+    color:var(--navy);
+  }
+  .lock-card p{
+    color:var(--muted);
+    font-size:14px;
+    margin:0 0 24px;
+    line-height:1.5;
+  }
+  .lock-card input[type=password]{
+    width:100%;
+    padding:12px 14px;
+    font-size:16px;
+    border:1px solid var(--line);
+    border-radius:3px;
+    margin-bottom:12px;
+    font-family:'Inter',sans-serif;
+  }
+  .lock-card input[type=password]:focus{
+    outline:none;
+    border-color:var(--sage);
+  }
+  .lock-error{
+    color:var(--danger);
+    font-size:13px;
+    margin:-4px 0 14px;
+    min-height:16px;
+  }
+
+  /* ---------- Buttons ---------- */
+  button{
+    font-family:'Inter',sans-serif;
+    cursor:pointer;
+    border:none;
+  }
+  .btn-primary{
+    background:var(--sage);
+    color:#fff;
+    width:100%;
+    padding:13px;
+    border-radius:3px;
+    font-size:15px;
+    font-weight:600;
+    transition:background 0.15s;
+  }
+  .btn-primary:hover{background:var(--sage-dark);}
+  .btn-primary:disabled{background:#B9C3BB;cursor:not-allowed;}
+  .btn-outline{
+    background:transparent;
+    border:1px solid var(--navy);
+    color:var(--navy);
+    width:100%;
+    padding:12px;
+    border-radius:3px;
+    font-size:14px;
+    font-weight:600;
+  }
+  .btn-outline:hover{background:var(--navy);color:#fff;}
+
+  /* ---------- Header ---------- */
+  header{text-align:center;margin-bottom:32px;}
+  header h1{
+    font-family:'Lora',serif;
+    font-size:38px;
+    color:var(--navy);
+    margin:0 0 4px;
+  }
+  header p{color:var(--muted);margin:0;font-size:14.5px;}
+  .streak-badge{
+    display:inline-block;
+    margin-top:14px;
+    background:#F4E9DC;
+    color:var(--rust);
+    font-size:13px;
+    font-weight:600;
+    padding:6px 14px;
+    border-radius:20px;
+  }
+
+  /* ---------- Case file card ---------- */
+  .folder{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:4px;
+    margin-bottom:20px;
+    position:relative;
+    overflow:hidden;
+  }
+  .folder-tab{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    letter-spacing:0.1em;
+    color:#fff;
+    background:var(--navy);
+    display:inline-block;
+    padding:5px 14px;
+    border-bottom-right-radius:4px;
+  }
+  .folder-body{padding:20px 22px 22px;}
+  .folder-body h2{
+    font-family:'Lora',serif;
+    font-size:16px;
+    margin:0 0 8px;
+    color:var(--navy);
+  }
+  .folder-body p{line-height:1.65;margin:0;font-size:15px;}
+
+  /* ---------- Clues ---------- */
+  .clue-list{display:flex;flex-direction:column;gap:10px;margin-bottom:6px;}
+  .clue-card{
+    border:1px solid var(--line);
+    border-left:4px solid var(--line);
+    border-radius:3px;
+    padding:14px 16px;
+    background:#F9FAF8;
+    opacity:0.5;
+    transition:all 0.25s;
+  }
+  .clue-card.revealed{
+    opacity:1;
+    background:var(--card);
+    border-left-color:var(--sage);
+  }
+  .clue-card.decisive.revealed{border-left-color:var(--rust);}
+  .clue-card.wrong.revealed{border-left-color:var(--danger);background:#FBF3F1;}
+  .clue-label{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    letter-spacing:0.08em;
+    color:var(--muted);
+    display:flex;
+    justify-content:space-between;
+  }
+  .clue-tag-decisive{color:var(--rust);font-weight:600;}
+  .clue-tag-wrong{color:var(--danger);font-weight:600;}
+  .clue-text{margin-top:6px;font-size:14.5px;line-height:1.6;}
+
+  /* ---------- Diagnosis input ---------- */
+  .guess-box{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:20px 22px;
+    margin-top:24px;
+  }
+  .guess-box label{
+    display:block;
+    font-size:13.5px;
+    font-weight:600;
+    margin-bottom:8px;
+    color:var(--navy);
+  }
+  .input-wrap{position:relative;}
+  #diagnosis-input{
+    width:100%;
+    padding:12px 14px;
+    font-size:16px;
+    border:1px solid var(--line);
+    border-radius:3px;
+    font-family:'Inter',sans-serif;
+  }
+  #diagnosis-input:focus{outline:none;border-color:var(--sage);}
+  .suggestions{
+    position:absolute;
+    top:calc(100% + 4px);
+    left:0;right:0;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:3px;
+    max-height:180px;
+    overflow-y:auto;
+    z-index:5;
+    box-shadow:0 4px 10px rgba(30,42,38,0.08);
+  }
+  .suggestions button{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    width:100%;
+    text-align:left;
+    padding:9px 14px;
+    font-size:14px;
+    background:none;
+    border-bottom:1px solid #F0F0EC;
+  }
+  .suggestions button:hover{background:#F2F5F0;}
+  .fcode{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px;
+    color:var(--muted);
+    margin-left:10px;
+    flex-shrink:0;
+  }
+
+  /* ---------- Result ---------- */
+  .result-card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:24px;
+    margin-top:20px;
+    text-align:center;
+  }
+  .result-card.lost{border-color:#E3BEB4;background:#FBF3F1;}
+  .result-title{font-family:'Lora',serif;font-size:22px;color:var(--navy);margin:0 0 6px;}
+  .result-diagnosis{font-weight:600;font-size:16px;margin-bottom:16px;}
+  .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px;}
+  .stat-box{background:#F4F6F2;border-radius:4px;padding:12px;}
+  .stat-box .n{font-size:22px;font-weight:700;color:var(--sage-dark);}
+  .stat-box .l{font-size:12px;color:var(--muted);}
+  #reveal-btn{margin-top:14px;}
+  .hidden{display:none !important;}
+  .guess-feedback{
+    margin-top:12px;
+    padding:9px 12px;
+    border-radius:3px;
+    font-size:13.5px;
+    font-weight:600;
+    text-align:center;
+    opacity:0;
+    max-height:0;
+    overflow:hidden;
+    transition:opacity 0.2s, max-height 0.2s;
+  }
+  .guess-feedback.show{opacity:1;max-height:60px;margin-bottom:2px;}
+  .guess-feedback.wrong{background:#FBF3F1;color:var(--danger);}
+  .guess-feedback.correct{background:#EAF1EC;color:var(--sage-dark);}
+  .wrong-guess-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+  .wrong-guess-list:empty{margin-top:0;}
+  .wrong-guess-chip{
+    font-size:12px;
+    padding:4px 10px;
+    border-radius:20px;
+    background:#FBF3F1;
+    color:var(--danger);
+    border:1px solid #E3BEB4;
+    text-decoration:line-through;
+    white-space:nowrap;
+  }
+  .config-note{
+    font-size:12px;
+    color:var(--muted);
+    text-align:center;
+    margin-top:36px;
+    line-height:1.6;
+  }
+</style>
+</head>
+<body>
+
+  <!-- ============ PASSWORD LOCK SCREEN ============ -->
+  <div id="lock-screen">
+    <div class="lock-card">
+      <span class="lock-tab">RESTRICTED</span>
+      <h1>DSMdle</h1>
+      <p>[26 전기 임상심리연구실]<br>사례 진단 연습용 DSMdle입니다.<br>비밀번호를 입력해주세요.</p>
+      <input type="password" id="password-input" placeholder="비밀번호" autocomplete="off">
+      <div class="lock-error" id="lock-error"></div>
+      <button class="btn-primary" id="unlock-btn">입장하기</button>
+    </div>
+  </div>
+
+  <!-- ============ GAME SCREEN ============ -->
+  <div class="wrap hidden" id="app">
+    <header>
+      <h1>DSMdle</h1>
+      <p>오늘의 사례를 진단해보세요</p>
+      <div id="streak-badge" class="streak-badge">🔥 미친(P) 26전기 임상랩실 파이팅</div>
+    </header>
+
+    <div class="folder">
+      <span class="folder-tab">CASE FILE — INTAKE NOTE</span>
+      <div class="folder-body">
+        <h2>사례 정보</h2>
+        <p id="intro-clue"></p>
+      </div>
+    </div>
+
+    <div id="clue-list" class="clue-list"></div>
+
+    <button class="btn-outline" id="reveal-btn">힌트 더 보기</button>
+
+    <div class="guess-box" id="guess-box">
+      <label>진단명은 무엇인가요?</label>
+      <div class="input-wrap">
+        <input type="text" id="diagnosis-input" placeholder="DSM-5 진단명을 입력하세요..." autocomplete="off">
+        <div class="suggestions hidden" id="suggestions"></div>
+      </div>
+      <button class="btn-primary" id="submit-btn" style="margin-top:12px;">제출하기</button>
+      <div class="guess-feedback" id="guess-feedback"></div>
+      <div class="wrong-guess-list" id="wrong-guess-list"></div>
+    </div>
+
+    <div class="result-card hidden" id="result-won">
+      <p class="result-title">🎉 정답입니다!</p>
+      <p class="result-diagnosis" id="result-diagnosis-text"></p>
+      <div class="stat-grid" style="grid-template-columns:1fr;">
+        <div class="stat-box"><div class="n" id="result-clues">0/6</div><div class="l">사용한 힌트</div></div>
+      </div>
+      <button class="btn-primary" id="practice-next-won">다른 사례 풀어보기 (연습)</button>
+    </div>
+
+    <div class="result-card lost hidden" id="result-lost">
+      <p class="result-title" style="color:var(--danger);">게임 종료</p>
+      <p>정답은 <strong id="lost-answer"></strong> 였습니다.</p>
+      <p style="font-size:13px;color:var(--muted);margin-top:-6px;">내일 새로운 사례로 다시 도전해보세요.</p>
+      <button class="btn-outline" id="practice-next-lost" style="margin-top:14px;">다른 사례 풀어보기 (연습)</button>
+    </div>
+
+  </div>
+
+<script>
+/* =====================================================================
+   설정 (CONFIG) — 비밀번호를 바꾸고 싶으면 아래 따옴표 안의 값만 수정하세요.
+   ===================================================================== */
+const SITE_PASSWORD = "michinp26"; // ← 여기 원하는 비밀번호로 바꾸세요
+
+/* =====================================================================
+   사례 데이터 (30개 진단 x 6단계 힌트)
+   ===================================================================== */
+const CASES = [
+  {diagnosis:"Major Depressive Disorder",code:"F32.9",clues:[
+    "A 34-year-old woman comes in saying she just feels 'off' lately and can't explain why.",
+    "She has been sleeping much more than usual and still feels exhausted every morning.",
+    "She used to love painting on weekends but hasn't picked up a brush in over two months.",
+    "Her appetite has dropped so much that her clothes no longer fit, and coworkers have noticed she looks pale and withdrawn.",
+    "For the past six weeks, nearly every day, she describes feeling 'empty' and has had passing thoughts that 'everyone would be better off' without her.",
+    "Her therapist notes that for over a month now, she has woken each day already dreading getting out of bed, feels worthless most of the day, struggles to concentrate at work, and has stopped answering calls from friends who ask if she's okay."]},
+  {diagnosis:"Generalized Anxiety Disorder",code:"F41.1",clues:[
+    "A 41-year-old man says he just feels like something bad is always about to happen, even when nothing is wrong.",
+    "He describes constant tension in his shoulders and neck that no massage seems to fix.",
+    "His wife says he double- and triple-checks the front door lock and the stove every night before bed, 'just in case.'",
+    "He worries about his job performance, his finances, and his kids' safety all at once, and can't seem to switch his focus to just one thing.",
+    "He has trouble falling asleep most nights because his mind keeps racing through 'worst-case scenarios' about ordinary daily events.",
+    "For the past eight months, he reports excessive worry about multiple areas of life most days, accompanied by muscle tension, restlessness, and difficulty controlling the worry, even though he knows it's disproportionate."]},
+  {diagnosis:"Panic Disorder",code:"F41.0",clues:[
+    "A 27-year-old woman describes sudden episodes where she feels like she's 'about to die,' out of nowhere.",
+    "During these episodes her heart pounds so hard she thinks she's having a heart attack, though ER tests always come back normal.",
+    "She has started avoiding the subway because her first episode happened there.",
+    "Each episode peaks within about ten minutes, with chest tightness, dizziness, and a feeling of unreality.",
+    "She now carries anti-anxiety medication everywhere 'just in case,' even though she hasn't had an episode in three weeks.",
+    "For over a month, she has been persistently afraid of having another attack and has reorganized her daily routine, including quitting a job that required commuting, to avoid situations where a previous attack occurred."]},
+  {diagnosis:"Social Anxiety Disorder",code:"F40.10",clues:[
+    "A 19-year-old college student says he'd rather fail an assignment than have to present it out loud.",
+    "He skips class on days when the professor might call on students at random.",
+    "At parties, he stands near the exit and rehearses what to say before speaking to anyone.",
+    "He is terrified that others will notice him blushing or stammering and think he's 'weird' or 'incompetent.'",
+    "He has turned down a promotion at his part-time job because it would require leading team meetings.",
+    "For over six months, he has intensely feared and avoided most situations involving being observed or evaluated by others, recognizing his fear is excessive but unable to control it."]},
+  {diagnosis:"Specific Phobia",code:"F40.218",clues:[
+    "Parents bring in their 8-year-old daughter because she refuses to go anywhere near dogs, even friendly ones.",
+    "She once saw a photo of a dog in a book and started crying and refused to turn the page.",
+    "At a friend's birthday party, she hid in the bathroom for the entire event because the host had a dog.",
+    "She screams and clings to her parents whenever a dog is within view, even from across the street.",
+    "This has been going on consistently for over a year and now she avoids the park entirely, where dogs are commonly walked.",
+    "Her fear of dogs is markedly out of proportion to the actual danger, appears almost immediately whenever a dog is present, and has led her to avoid multiple everyday places just to prevent contact."]},
+  {diagnosis:"Obsessive-Compulsive Disorder",code:"F42.2",clues:[
+    "A 24-year-old man says he 'just can't relax' unless everything around him feels right.",
+    "He spends nearly two hours every morning arranging his desk items in a specific order before he can start work.",
+    "He is plagued by intrusive thoughts that he might have left the stove on, even after checking it repeatedly.",
+    "He washes his hands until they crack and bleed because he can't shake the feeling that they're still contaminated.",
+    "He knows these rituals don't make logical sense, but resisting them causes him unbearable anxiety.",
+    "He reports spending more than three hours a day on checking and washing rituals aimed at neutralizing intrusive, unwanted thoughts, which significantly interferes with his ability to leave for work on time."]},
+  {diagnosis:"Post-Traumatic Stress Disorder",code:"F43.10",clues:[
+    "A 30-year-old former soldier says loud noises make him 'freeze up' without warning.",
+    "He avoids driving because an explosion happened while he was in a convoy overseas.",
+    "He has recurring nightmares about the incident and wakes up drenched in sweat.",
+    "He startles violently at fireworks and once dove for cover at a Fourth of July celebration.",
+    "He says he feels emotionally 'numb' around his family and has stopped enjoying activities he used to love since returning home.",
+    "For over a year since the deployment incident, he has experienced intrusive memories, avoidance of trauma reminders, negative changes in mood and cognition, and heightened arousal, all directly tied to the event he witnessed."]},
+  {diagnosis:"Bipolar I Disorder",code:"F31.9",clues:[
+    "A 29-year-old man's coworkers say he's been 'a completely different person' this week.",
+    "He started three new projects at work simultaneously and insists he barely needs sleep to keep going.",
+    "He maxed out two credit cards in a weekend buying gifts for strangers he'd just met at a bar.",
+    "His speech has become so rapid and jumping between topics that his friends struggle to follow him.",
+    "His family reports this episode has lasted over a week, and two months ago he had an episode of the opposite extreme, barely getting out of bed for weeks.",
+    "For the past nine days, he has shown abnormally elevated, expansive mood, decreased need for sleep, grandiosity, and risky spending severe enough that his family had to intervene and he was briefly hospitalized."]},
+  {diagnosis:"Bipolar II Disorder",code:"F31.81",clues:[
+    "A 38-year-old woman describes 'good weeks and bad weeks' that don't seem tied to anything in particular.",
+    "During her 'good weeks,' she feels unusually productive, upbeat, and needs less sleep than normal, though never enough to worry anyone.",
+    "During her 'bad weeks,' which last far longer, she feels hopeless, sleeps excessively, and struggles to get out of bed.",
+    "Her 'good weeks' have never caused problems at work or home, but they are noticeably different from her usual self, lasting about four days at a time.",
+    "She has had multiple depressive episodes lasting two or more weeks each, alternating with these milder elevated periods over the last three years.",
+    "Her clinician confirms a history of at least one hypomanic episode lasting four consecutive days with elevated mood and increased energy, alongside major depressive episodes, but never a manic episode severe enough to require hospitalization."]},
+  {diagnosis:"Schizophrenia",code:"F20.9",clues:[
+    "A 22-year-old man's roommates say he's been talking to himself and seems convinced people are watching him.",
+    "He believes his neighbors have installed hidden cameras in his apartment to monitor his thoughts.",
+    "He often stops mid-sentence, saying he 'hears' comments about his behavior when no one else is around.",
+    "His speech has become disorganized, jumping between unrelated topics, and he has withdrawn from all social contact over the past six months.",
+    "He has stopped attending classes, showers rarely, and shows little emotional expression even when discussing distressing topics.",
+    "For over six months, he has experienced persistent auditory hallucinations, fixed delusions of surveillance, disorganized speech, and a marked decline in daily functioning including hygiene and social withdrawal."]},
+  {diagnosis:"Schizoaffective Disorder",code:"F25.1",clues:[
+    "A 35-year-old woman has had psychiatric hospitalizations that don't fit neatly into one category, according to her chart.",
+    "During some periods she hears voices commenting on her actions even when her mood is completely stable.",
+    "At other times, she has weeks of profound depression with the same voices persisting, plus feelings of worthlessness and hopelessness.",
+    "Her family notes that the voices and paranoid beliefs have been present continuously for over two years, regardless of her mood state.",
+    "In the past month, she experienced at least a two-week period where the hallucinations continued even though her depressive symptoms had fully resolved.",
+    "Her diagnosis requires that hallucinations or delusions occurred for at least two weeks in the absence of a mood episode, while mood symptoms were also present for the majority of the illness's total duration."]},
+  {diagnosis:"Borderline Personality Disorder",code:"F60.3",clues:[
+    "A 26-year-old woman describes her relationships as 'intense and short-lived,' often ending abruptly.",
+    "She idealizes new friends within days, then feels betrayed and cuts them off completely over minor slights.",
+    "She has a pattern of impulsive spending sprees and risky driving when she feels overwhelmed.",
+    "She reports chronic feelings of emptiness and says her sense of who she is 'changes depending on who I'm with.'",
+    "She has made several suicidal gestures after breakups, along with cutting behavior to cope with intense emotional pain.",
+    "Her history shows a long-standing pattern of unstable relationships, identity disturbance, impulsivity in at least two areas, recurrent self-harm, affective instability, and frantic efforts to avoid real or imagined abandonment."]},
+  {diagnosis:"Antisocial Personality Disorder",code:"F60.2",clues:[
+    "A 33-year-old man has a long history of run-ins with the law dating back to his teenage years.",
+    "He describes lying to employers about his qualifications without any hesitation or guilt.",
+    "He has been fired from multiple jobs for physical altercations with coworkers and shows no remorse when discussing them.",
+    "His probation officer notes a pattern of impulsive decisions, including reckless driving that once endangered pedestrians.",
+    "He has a documented history of conduct problems before age 15, including truancy and cruelty to animals.",
+    "Since age 15, he has shown a pervasive pattern of disregard for others' rights: deceitfulness, impulsivity, irritability, reckless disregard for safety, and lack of remorse, with conduct disorder symptoms present before age 15."]},
+  {diagnosis:"Narcissistic Personality Disorder",code:"F60.81",clues:[
+    "A 45-year-old executive's colleagues describe him as someone who 'always needs to be the smartest person in the room.'",
+    "He frequently exaggerates his accomplishments and expects special treatment from staff, even for minor requests.",
+    "He becomes furious when a junior employee receives credit he feels belongs to him, though he rarely credits others.",
+    "He shows little interest in colleagues' personal struggles unless it directly affects his own projects.",
+    "His subordinates describe him as frequently exploiting their work to advance his own image, while requiring constant admiration to feel validated.",
+    "Across many work relationships, he has shown a persistent pattern of grandiosity, need for excessive admiration, entitlement, exploitation of others, and lack of empathy, evident since early adulthood."]},
+  {diagnosis:"Avoidant Personality Disorder",code:"F60.6",clues:[
+    "A 31-year-old woman says she has 'always been the quiet one' who avoids new social situations.",
+    "She turned down a work promotion because it would mean more client-facing meetings and possible criticism.",
+    "She rarely makes new friends because she assumes people won't like her unless she's certain they will.",
+    "She describes feeling 'inadequate' compared to almost everyone she meets, and it keeps her from speaking up in group settings.",
+    "She has avoided dating for years, afraid of being ridiculed or rejected if a partner really got to know her.",
+    "Since early adulthood, she has shown a pervasive pattern of social inhibition, feelings of inadequacy, and hypersensitivity to negative evaluation, leading her to avoid occupational and interpersonal activities involving significant interpersonal contact."]},
+  {diagnosis:"Anorexia Nervosa",code:"F50.01",clues:[
+    "A 16-year-old girl's parents are concerned because she has lost a significant amount of weight in the last few months.",
+    "She insists she's 'still too big' despite being visibly underweight, and weighs herself multiple times a day.",
+    "She has started cutting her food into tiny pieces and skipping meals with the family, claiming she 'already ate.'",
+    "Her menstrual periods have stopped, and her pediatrician notes her BMI is now significantly below the expected range for her age.",
+    "She exercises intensely even when exhausted or ill, and becomes visibly distressed if asked to eat a full meal.",
+    "She restricts her caloric intake to well below what her body needs, has an intense fear of weight gain despite being underweight, and holds a distorted view of her body shape as central to her self-worth."]},
+  {diagnosis:"Bulimia Nervosa",code:"F50.2",clues:[
+    "A 21-year-old college student's roommate is worried because she often disappears into the bathroom right after meals.",
+    "She has been buying large quantities of snack food that disappear within a single evening, alone in her room.",
+    "Her dentist recently noted unusual enamel erosion on her teeth during a routine visit.",
+    "She describes eating amounts of food in a short period that feel completely out of her control, followed by intense guilt.",
+    "She purges by vomiting or uses laxatives afterward, at least twice a week, to 'undo' what she ate, all while maintaining a normal body weight.",
+    "For the past three months, she has had recurrent episodes of eating unusually large amounts of food with a sense of loss of control, followed by compensatory vomiting or laxative use at least once a week, while her weight remains within a normal range."]},
+  {diagnosis:"Binge Eating Disorder",code:"F50.81",clues:[
+    "A 42-year-old man says he sometimes eats 'until it hurts,' even when he's not physically hungry.",
+    "He often eats alone at night because he's embarrassed by how much food he consumes in one sitting.",
+    "These episodes leave him feeling disgusted with himself and depressed afterward, though he never tries to purge or compensate.",
+    "He eats rapidly during these episodes, well past the point of fullness, at least once a week for the past several months.",
+    "He reports significant distress about these episodes but no history of vomiting, laxative use, or excessive exercise afterward.",
+    "At least weekly for three months, he has had episodes of eating large amounts of food with a sense of loss of control, marked distress, and no compensatory behaviors, distinguishing his pattern from other eating disorders."]},
+  {diagnosis:"Attention-Deficit/Hyperactivity Disorder",code:"F90.2",clues:[
+    "A 9-year-old boy's teacher says he 'just can't sit still' during class, even more than his classmates.",
+    "He frequently loses his homework and forgets to turn in assignments he actually completed.",
+    "He blurts out answers before the teacher finishes asking questions and struggles to wait his turn in games.",
+    "At home, he jumps between toys and activities within minutes, rarely finishing anything he starts.",
+    "His parents say this restlessness and forgetfulness have been present since before kindergarten, both at school and at home.",
+    "Since before age 12, in more than one setting, he has shown persistent inattention (losing items, careless mistakes) and hyperactivity-impulsivity (fidgeting, interrupting, difficulty waiting) that clearly interferes with his schoolwork and home life."]},
+  {diagnosis:"Autism Spectrum Disorder",code:"F84.0",clues:[
+    "A 4-year-old boy's parents are concerned because he doesn't respond when they call his name.",
+    "He lines up his toy cars in the exact same order every day and becomes very upset if the order is changed.",
+    "He has very limited eye contact and doesn't point to show his parents things he's interested in.",
+    "He repeats phrases from his favorite cartoon over and over, seemingly out of context, rather than using them to communicate.",
+    "He becomes extremely distressed by loud noises and certain fabric textures, covering his ears or refusing to wear certain clothes.",
+    "Since early childhood, he has shown persistent deficits in social communication and reciprocity, restricted repetitive behaviors, insistence on sameness, and unusual sensory reactivity across multiple contexts."]},
+  {diagnosis:"Conduct Disorder",code:"F91.9",clues:[
+    "A 14-year-old boy has been suspended from school multiple times this year for fighting.",
+    "His mother found out he had been sneaking out at night and staying out well past curfew for months.",
+    "He was recently caught shoplifting from a convenience store with friends, not for the first time.",
+    "A neighbor reported him for throwing rocks at a stray cat, which he later admitted to doing 'for fun.'",
+    "School records show a pattern over the last year of bullying younger students, destroying property, and lying to avoid consequences.",
+    "Over the past 12 months, he has repeatedly violated others' basic rights and age-appropriate norms: aggression toward people and animals, property destruction, deceitfulness, and serious rule violations like staying out past curfew."]},
+  {diagnosis:"Oppositional Defiant Disorder",code:"F91.3",clues:[
+    "A 7-year-old girl's parents say she 'argues about literally everything,' even simple requests like putting on shoes.",
+    "Her teacher reports she often loses her temper over minor frustrations in class, more than other children her age.",
+    "She frequently blames her younger brother for things she did herself and refuses to admit fault.",
+    "She deliberately annoys her classmates on purpose when she feels ignored, then acts angry when they react.",
+    "For the past eight months, both at home and at school, she has shown a persistent pattern of irritability, defiance, and vindictiveness toward authority figures.",
+    "For at least six months, she has displayed a pattern of angry/irritable mood, argumentative/defiant behavior toward authority figures, and vindictiveness occurring in more than one setting, well beyond what's typical for her age."]},
+  {diagnosis:"Alcohol Use Disorder",code:"F10.20",clues:[
+    "A 47-year-old man's wife says he 'always finds a reason' to have a drink, even on weekday mornings now.",
+    "He has tried to cut back several times but always ends up drinking more than he intended.",
+    "He was recently written up at work for showing up late and smelling of alcohol, more than once.",
+    "He has given up his weekend golf league because he'd rather stay home and drink instead.",
+    "He now needs noticeably more alcohol than he used to in order to feel the same effects, and gets shaky and anxious if he goes too long without a drink.",
+    "Over the past year, he has shown tolerance, withdrawal symptoms, unsuccessful attempts to cut down, continued use despite social and occupational problems, and giving up previously enjoyed activities in favor of drinking."]},
+  {diagnosis:"Illness Anxiety Disorder",code:"F45.21",clues:[
+    "A 39-year-old woman has seen five different doctors this year, convinced each time that something serious is wrong.",
+    "A normal headache sends her into hours of researching brain tumor symptoms online.",
+    "Her doctor has repeatedly reassured her that her tests are normal, but the relief only lasts a day or two before new worries start.",
+    "She checks her body for lumps or unusual sensations multiple times a day, and avoids medical dramas on TV because they trigger her fears.",
+    "She has had only mild, if any, physical symptoms this whole time, yet the fear that she has a serious undiagnosed illness has persisted for over eight months.",
+    "For over six months, she has been preoccupied with having a serious illness despite minimal somatic symptoms, engaging in excessive health-related behaviors like repeated body-checking, and her reassurance from doctors never lasts."]},
+  {diagnosis:"Somatic Symptom Disorder",code:"F45.1",clues:[
+    "A 50-year-old man has chronic back pain that has led him to leave his job and rarely leave the house.",
+    "He spends much of each day thinking about his pain and how it might be getting worse, even without new symptoms.",
+    "Multiple specialists have found no clear medical cause severe enough to explain how disabled he feels.",
+    "He has cycled through several new doctors after previous ones told him there was nothing more they could do.",
+    "His pain has persisted for over a year, and his life now revolves almost entirely around managing and worrying about his symptoms.",
+    "For more than six months, he has had one or more distressing somatic symptoms accompanied by excessive, disproportionate thoughts, anxiety, and time devoted to health concerns, regardless of whether a medical explanation is found."]},
+  {diagnosis:"Dissociative Identity Disorder",code:"F44.81",clues:[
+    "A 28-year-old woman's coworkers have noticed she sometimes acts like a 'completely different person,' with a different name and voice.",
+    "She has found notes and clothing she doesn't remember buying, in a handwriting that doesn't look like hers.",
+    "She reports significant gaps in her memory for entire days, especially during times of high stress.",
+    "Her therapist has observed at least three distinct behavioral states, each with a different name, tone of voice, and set of memories.",
+    "She has a documented childhood history of severe repeated trauma, and these identity shifts have caused serious disruptions in her job and relationships.",
+    "She shows disruption of identity characterized by two or more distinct personality states with their own patterns of behaving and relating, along with recurrent gaps in memory for everyday events too extensive to be explained by ordinary forgetfulness."]},
+  {diagnosis:"Body Dysmorphic Disorder",code:"F45.22",clues:[
+    "A 25-year-old man spends over three hours a day in front of the mirror, convinced his nose is 'grotesquely' large.",
+    "Friends and family insist his nose looks completely normal, but he doesn't believe them at all.",
+    "He has canceled social plans repeatedly because he feels too 'ugly' to be seen in public.",
+    "He has researched multiple cosmetic surgeons for a rhinoplasty, despite one surgeon telling him there's nothing to fix.",
+    "He constantly compares his nose to other people's in photos and online, and it now consumes several hours of his day.",
+    "He is preoccupied with a perceived flaw in his appearance that others consider minimal or nonexistent, performs repetitive checking and comparing behaviors, and this preoccupation causes significant distress and social avoidance."]},
+  {diagnosis:"Persistent Depressive Disorder",code:"F34.1",clues:[
+    "A 44-year-old woman describes feeling 'low' most of her adult life, more like a personality trait than an illness.",
+    "She can't remember the last time she felt genuinely energetic or hopeful about the future for more than a few days.",
+    "Her friends say she's been the 'gloomy one' in the group for as long as they've known her, going back years.",
+    "She often has low appetite and trouble concentrating, though she's never had a period severe enough to stop working entirely.",
+    "For the past three years, she reports never having more than two consecutive symptom-free months of feeling like her 'normal self.'",
+    "For at least two years, she has experienced a depressed mood for most of the day, more days than not, along with low energy, poor concentration, and low self-esteem, without a symptom-free period longer than two months."]},
+  {diagnosis:"Adjustment Disorder",code:"F43.23",clues:[
+    "A 55-year-old man has felt unusually anxious and down 'ever since' being laid off two months ago.",
+    "He has trouble concentrating at his new part-time job and finds himself tearing up over small setbacks.",
+    "His symptoms clearly began right after the layoff and have made it hard for him to focus on his job search.",
+    "Before the layoff, he had no history of anxiety or depressive episodes and functioned well at work and home.",
+    "It's been just under three months since the layoff, and while distressed, he is still managing daily responsibilities, just less effectively than before.",
+    "Within three months of a clearly identifiable stressor, he developed emotional and behavioral symptoms out of proportion to the stressor, causing impairment, but not meeting criteria for a full depressive or anxiety disorder."]},
+  {diagnosis:"Insomnia Disorder",code:"F51.01",clues:[
+    "A 52-year-old woman says she 'just can't remember the last time' she got a full night's sleep.",
+    "She lies awake for over an hour most nights, mind racing about the next day even when she's exhausted.",
+    "She wakes up multiple times a night and struggles to fall back asleep, despite going to bed at a consistent time.",
+    "During the day she feels irritable and has trouble concentrating at work due to how poorly she's sleeping.",
+    "This pattern has continued at least three nights a week for the past four months, despite having ample opportunity to sleep.",
+    "At least three nights per week for more than three months, she has had difficulty falling and staying asleep despite adequate opportunity for sleep, causing significant daytime distress and impaired functioning."]}
+];
+
+/* =====================================================================
+   게임 로직
+   ===================================================================== */
+const $ = (id) => document.getElementById(id);
+
+// ---- 비밀번호 확인 (브라우저 세션 동안만 유지) ----
+function tryUnlock(){
+  const val = $('password-input').value;
+  if(val === SITE_PASSWORD){
+    sessionStorage.setItem('dsmdle_unlocked','1');
+    $('lock-screen').classList.add('hidden');
+    $('app').classList.remove('hidden');
+    initGame();
+  } else {
+    $('lock-error').textContent = '비밀번호가 올바르지 않습니다.';
+  }
+}
+$('unlock-btn').addEventListener('click', tryUnlock);
+$('password-input').addEventListener('keydown', (e) => { if(e.key === 'Enter') tryUnlock(); });
+
+// ---- 상태 ----
+let currentCase = null;
+let cluesRevealed = 0;
+let gameState = 'playing'; // playing | won | lost
+let clueResult = [];   // 각 클루 인덱스별: null(미시도) | 'wrong'(그 클루까지 보고 오답 제출)
+let wrongGuesses = []; // 오답으로 제출했던 진단명 목록
+
+if(sessionStorage.getItem('dsmdle_unlocked') === '1'){
+  $('lock-screen').classList.add('hidden');
+  $('app').classList.remove('hidden');
+  initGame();
+}
+
+// ---- 날짜 기반 오늘의 사례 선택 ----
+function todayString(){
+  const d = new Date();
+  return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
+}
+function dayNumber(){
+  const epoch = new Date('2024-01-01T00:00:00');
+  return Math.floor((new Date() - epoch) / 86400000);
+}
+function getDailyIndex(total){
+  const n = dayNumber();
+  return ((n % total) + total) % total;
+}
+
+function initGame(){
+  const idx = getDailyIndex(CASES.length);
+  currentCase = CASES[idx];
+  clueResult = new Array(currentCase.clues.length).fill(null);
+  wrongGuesses = [];
+
+  // 오늘 이미 플레이했는지 확인
+  if(localStorage.getItem('dsmdle_last_played_date') === todayString()){
+    cluesRevealed = parseInt(localStorage.getItem('dsmdle_today_clues') || '0', 10);
+    const savedState = localStorage.getItem('dsmdle_today_state');
+    gameState = savedState || 'won';
+    try{
+      const savedResult = JSON.parse(localStorage.getItem('dsmdle_today_clueresult') || 'null');
+      if(Array.isArray(savedResult)) clueResult = savedResult;
+    }catch(e){}
+    try{
+      const savedWrong = JSON.parse(localStorage.getItem('dsmdle_today_wrongguesses') || 'null');
+      if(Array.isArray(savedWrong)) wrongGuesses = savedWrong;
+    }catch(e){}
+    renderClues();
+    if(gameState === 'won') showWon();
+    else if(gameState === 'lost') showLost();
+    return;
+  }
+
+  renderClues();
+}
+
+function renderClues(){
+  $('intro-clue').textContent = currentCase.clues[0];
+  const list = $('clue-list');
+  list.innerHTML = '';
+  currentCase.clues.forEach((clue, i) => {
+    const isDecisive = i === currentCase.clues.length - 1;
+    const revealed = i < cluesRevealed;
+    const isWrong = clueResult[i] === 'wrong';
+    const div = document.createElement('div');
+    div.className = 'clue-card' + (revealed ? ' revealed' : '') + (isDecisive ? ' decisive' : '') + (isWrong ? ' wrong' : '');
+    div.innerHTML = `
+      <div class="clue-label">
+        <span>CLUE ${String(i+1).padStart(2,'0')}</span>
+        ${isWrong ? '<span class="clue-tag-wrong">✕ 오답 제출됨</span>' : (isDecisive ? '<span class="clue-tag-decisive">DECISIVE</span>' : '')}
+      </div>
+      ${revealed ? `<div class="clue-text">${clue}</div>` : ''}
+    `;
+    list.appendChild(div);
+  });
+
+  const revealBtn = $('reveal-btn');
+  if(gameState !== 'playing' || cluesRevealed >= currentCase.clues.length){
+    revealBtn.classList.add('hidden');
+  } else {
+    revealBtn.classList.remove('hidden');
+    revealBtn.textContent = `힌트 ${cluesRevealed+1} 확인하기`;
+  }
+
+  $('guess-box').classList.toggle('hidden', gameState !== 'playing');
+  renderWrongGuessList();
+}
+
+function renderWrongGuessList(){
+  const box = $('wrong-guess-list');
+  box.innerHTML = wrongGuesses.map(g => `<span class="wrong-guess-chip">${g}</span>`).join('');
+}
+
+function showFeedback(message, type){
+  const el = $('guess-feedback');
+  el.textContent = message;
+  el.className = 'guess-feedback show ' + type;
+  clearTimeout(showFeedback._t);
+  showFeedback._t = setTimeout(() => {
+    el.classList.remove('show');
+  }, 2200);
+}
+
+$('reveal-btn').addEventListener('click', () => {
+  if(cluesRevealed < currentCase.clues.length){
+    cluesRevealed++;
+    renderClues();
+  }
+});
+
+// ---- 자동완성 (해당 글자로 시작하는 진단명을 전부 표시, F코드 함께 표시) ----
+$('diagnosis-input').addEventListener('input', (e) => {
+  const q = e.target.value.trim().toLowerCase();
+  const box = $('suggestions');
+  if(!q){ box.classList.add('hidden'); box.innerHTML=''; return; }
+  const starts = CASES.filter(c => c.diagnosis.toLowerCase().startsWith(q));
+  const includes = CASES.filter(c => !c.diagnosis.toLowerCase().startsWith(q) && c.diagnosis.toLowerCase().includes(q));
+  const matches = [...starts, ...includes]; // 개수 제한 없음 - 해당 글자로 시작하는 진단명 전부 표시
+  if(matches.length === 0){ box.classList.add('hidden'); box.innerHTML=''; return; }
+  box.innerHTML = matches.map(m => `<button type="button">${m.diagnosis} <span class="fcode">${m.code}</span></button>`).join('');
+  box.classList.remove('hidden');
+  [...box.children].forEach((btn, i) => {
+    btn.addEventListener('click', () => {
+      $('diagnosis-input').value = matches[i].diagnosis;
+      box.classList.add('hidden');
+    });
+  });
+});
+document.addEventListener('click', (e) => {
+  if(!e.target.closest('.input-wrap')) $('suggestions').classList.add('hidden');
+});
+
+// ---- 제출 ----
+$('submit-btn').addEventListener('click', () => {
+  const guess = $('diagnosis-input').value.trim();
+  if(!guess) return;
+
+  if(guess.toLowerCase() === currentCase.diagnosis.toLowerCase()){
+    gameState = 'won';
+
+    // 스트릭 업데이트
+    const today = dayNumber();
+    const lastStreakDay = localStorage.getItem('dsmdle_last_streak_day');
+    let streak = parseInt(localStorage.getItem('dsmdle_streak') || '0', 10);
+    streak = (lastStreakDay === String(today-1)) ? streak+1 : 1;
+    localStorage.setItem('dsmdle_streak', String(streak));
+    localStorage.setItem('dsmdle_last_streak_day', String(today));
+
+    localStorage.setItem('dsmdle_last_played_date', todayString());
+    localStorage.setItem('dsmdle_today_clues', String(cluesRevealed));
+    localStorage.setItem('dsmdle_today_state', 'won');
+    localStorage.setItem('dsmdle_today_clueresult', JSON.stringify(clueResult));
+    localStorage.setItem('dsmdle_today_wrongguesses', JSON.stringify(wrongGuesses));
+
+    $('diagnosis-input').value = '';
+    showFeedback('정답입니다!', 'correct');
+    renderClues();
+    showWon();
+  } else {
+    // 방금 본 클루까지의 정보로는 오답이었다는 걸 표시
+    if(cluesRevealed > 0) clueResult[cluesRevealed - 1] = 'wrong';
+    wrongGuesses.push(guess);
+    $('diagnosis-input').value = '';
+    $('suggestions').classList.add('hidden');
+
+    if(cluesRevealed < currentCase.clues.length){
+      cluesRevealed++;
+      showFeedback('오답입니다. 다음 힌트가 열렸어요.', 'wrong');
+      renderClues();
+    } else {
+      gameState = 'lost';
+      localStorage.setItem('dsmdle_last_played_date', todayString());
+      localStorage.setItem('dsmdle_today_clues', String(cluesRevealed));
+      localStorage.setItem('dsmdle_today_state', 'lost');
+      localStorage.setItem('dsmdle_today_clueresult', JSON.stringify(clueResult));
+      localStorage.setItem('dsmdle_today_wrongguesses', JSON.stringify(wrongGuesses));
+      showFeedback('오답입니다.', 'wrong');
+      renderClues();
+      showLost();
+    }
+  }
+});
+
+function showWon(){
+  $('result-won').classList.remove('hidden');
+  $('result-lost').classList.add('hidden');
+  $('result-diagnosis-text').textContent = `${currentCase.diagnosis} (${currentCase.code})`;
+  $('result-clues').textContent = `${cluesRevealed}/${currentCase.clues.length}`;
+}
+function showLost(){
+  $('result-lost').classList.remove('hidden');
+  $('result-won').classList.add('hidden');
+  $('lost-answer').textContent = `${currentCase.diagnosis} (${currentCase.code})`;
+}
+
+// ---- 연습 모드: 정답/오답 후 다른 사례로 넘어가기 (오늘의 사례 기록은 그대로 유지됨) ----
+function nextPracticeCase(){
+  let idx;
+  do{
+    idx = Math.floor(Math.random() * CASES.length);
+  }while(CASES.length > 1 && CASES[idx] === currentCase);
+
+  currentCase = CASES[idx];
+  clueResult = new Array(currentCase.clues.length).fill(null);
+  wrongGuesses = [];
+  cluesRevealed = 0;
+  gameState = 'playing';
+
+  $('diagnosis-input').value = '';
+  $('suggestions').classList.add('hidden');
+  $('guess-feedback').classList.remove('show');
+  $('result-won').classList.add('hidden');
+  $('result-lost').classList.add('hidden');
+
+  renderClues();
+}
+$('practice-next-won').addEventListener('click', nextPracticeCase);
+$('practice-next-lost').addEventListener('click', nextPracticeCase);
+</script>
+</body>
+</html>
